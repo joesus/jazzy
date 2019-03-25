@@ -227,6 +227,9 @@ module Jazzy
         env = ENV
       end
       bin_path = Pathname(__FILE__) + '../../../bin/sourcekitten'
+      # DONT MERGE ME
+      bin_path = '/Users/johnf/Library/Developer/Xcode/DerivedData/SourceKitten-dhzezqfrmbutuwfjzybugyudpzkb//Build/Products/Debug/sourcekitten.app/Contents/MacOS/sourcekitten'
+      # DONT MERGE ME
       output, = Executable.execute_command(bin_path, arguments, true, env: env)
       output
     end
