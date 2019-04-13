@@ -106,9 +106,16 @@ module Jazzy
     attr_accessor :deprecation_message
     attr_accessor :unavailable
     attr_accessor :unavailable_message
+    attr_accessor :generic_requirements
 
     def usage_discouraged?
       unavailable || deprecated
+    end
+
+    def constrained_extension?
+      type.swift_extension? &&
+        generic_requirements &&
+        !generic_requirements.empty?
     end
 
     def alternative_abstract
