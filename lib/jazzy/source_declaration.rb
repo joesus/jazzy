@@ -2,6 +2,7 @@ require 'jazzy/source_declaration/access_control_level'
 require 'jazzy/source_declaration/type'
 
 module Jazzy
+  # rubocop:disable Metrics/ClassLength
   class SourceDeclaration
     # kind of declaration (e.g. class, variable, function)
     attr_accessor :type
@@ -107,6 +108,7 @@ module Jazzy
     attr_accessor :unavailable
     attr_accessor :unavailable_message
     attr_accessor :generic_requirements
+    attr_accessor :inherited_types
 
     def usage_discouraged?
       unavailable || deprecated
@@ -116,6 +118,11 @@ module Jazzy
       type.swift_extension? &&
         generic_requirements &&
         !generic_requirements.empty?
+    end
+
+    def inherited_types?
+      inherited_types &&
+        !inherited_types.empty?
     end
 
     def alternative_abstract
@@ -138,4 +145,5 @@ module Jazzy
       Config.instance.abstract_glob.select { |e| File.file? e }
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end

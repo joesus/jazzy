@@ -278,13 +278,7 @@ module Jazzy
 
       # Document extensions & enum elements, since we can't tell their ACL.
       type = SourceDeclaration::Type.new(doc['key.kind'])
-      return true if type.swift_enum_element?
-      if type.swift_extension?
-        return Array(doc['key.substructure']).any? do |subdoc|
-          subtype = SourceDeclaration::Type.new(subdoc['key.kind'])
-          !subtype.mark? && should_document?(subdoc)
-        end
-      end
+      return true if type.swift_enum_element? || type.swift_extension?
 
       acl_ok = SourceDeclaration::AccessControlLevel.from_doc(doc) >= @min_acl
       acl_ok.tap { @stats.add_acl_skipped unless acl_ok }
@@ -523,10 +517,15 @@ module Jazzy
         declaration.unavailable = doc['key.always_unavailable']
         declaration.generic_requirements =
           find_generic_requirements(doc['key.parsed_declaration'])
+        inherited_types = doc['key.inheritedtypes'] || []
+        declaration.inherited_types =
+          inherited_types.map { |type| type['key.name'] }.compact
 
         next unless make_doc_info(doc, declaration)
         declaration.children = make_substructure(doc, declaration)
-        next if declaration.type.extension? && declaration.children.empty?
+        next if declaration.type.extension? &&
+                declaration.children.empty? &&
+                !declaration.inherited_types?
         declarations << declaration
       end
       declarations
@@ -631,9 +630,11 @@ module Jazzy
       end
 
       # Constrained extensions at the end
-      constrained, regular_exts = extensions.partition(&:constrained_extension?)      decls = typedecls + regular_exts + constrained
+      constrained, regular_exts = extensions.partition(&:constrained_extension?)
+      decls = typedecls + regular_exts + constrained
 
       move_merged_extension_marks(decls)
+      document_conformances(decls)
 
       decls.first.tap do |merged|
         merged.children = deduplicate_declarations(
@@ -695,6 +696,23 @@ module Jazzy
         if child && child.mark.empty?
           child.mark.copy(ext.mark)
         end
+      end
+    end
+
+    # Augment the main declaration with any protocol conformances added
+    # by extensions.  If the main declaration is itself an extension then
+    # include other conditional extensions as well.
+    def self.document_conformances(decls)
+      first = decls.first
+
+      declarations = decls[1..-1].select do |decl|
+        decl.type.swift_extension? &&
+          (decl.inherited_types? ||
+            (first.type.swift_extension? && decl.constrained_extension?))
+      end.map(&:declaration)
+
+      unless declarations.empty?
+        first.declaration = declarations.prepend(first.declaration).uniq.join
       end
     end
 
